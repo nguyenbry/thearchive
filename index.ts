@@ -5,9 +5,12 @@ import { searchForNewSalesAndUpload } from "./src/loop/handle-sales";
 import { connectToDatabase } from "./src/mongoose/connect-to-database";
 import { adminAccount } from "./src/sneaker-consign/admin-account";
 import { initBestSellersBot } from "./src/discord/best-sellers.bot";
-import { Logger, healthCheckLog, loopLog } from "./src/logger";
+import { healthCheckLog, loopLog } from "./src/logger";
 import { searchAlgolia } from "./src/stockx/algolia-search";
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+
+const developmentPath = __dirname + "/dev";
+if (!existsSync(developmentPath)) mkdirSync(developmentPath);
 
 const runAndScheduleAgain = async () => {
   // eslint-disable-next-line unicorn/consistent-function-scoping
@@ -61,8 +64,11 @@ async function testMain() {
 
   const datas = await Promise.all(proms);
 
-  writeFileSync("./algolia.json", JSON.stringify(datas, undefined, 2), "utf8");
-  // console.log(JSON.stringify(data, undefined, 2));
+  writeFileSync(
+    developmentPath + "/algolia.json",
+    JSON.stringify(datas, undefined, 2),
+    "utf8",
+  );
 }
 
 void main();
