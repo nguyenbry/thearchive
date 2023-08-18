@@ -1,15 +1,22 @@
 export class Logger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public static log(...message: any[]) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, unicorn/no-console-spaces
-    console.log(`[${new Date().toLocaleString()}] `, ...message);
+  // this:void
+  public static log(this: void, ...message: any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    console.log(`[${new Date().toLocaleString()}]`, ...message);
   }
 }
 
-const getPrefixedLogger = (prefix: string) => {
-  const logFunction: typeof Logger.log = (...message) => {
+export type LogFunction = typeof Logger.log;
+
+export const getPrefixedLogger = (
+  prefix: string,
+  loggerFunction?: LogFunction,
+) => {
+  const logFunction: LogFunction = (...message) => {
+    const log = loggerFunction ?? Logger.log;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    Logger.log(`[${prefix}]`, ...message);
+    log(`[${prefix}]`, ...message);
   };
 
   return logFunction;

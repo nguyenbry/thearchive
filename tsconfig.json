@@ -11,5 +11,12 @@
     "noUncheckedIndexedAccess": true
   },
   "exclude": ["node_modules", "dist"],
-  "include": [".eslintrc.js", "**/*.js", "**/*.ts", "**/*.cjs", "**/*.mjs"]
+  "include": [
+    ".eslintrc.js",
+    "**/*.js",
+    "**/*.ts",
+    "**/*.cjs",
+    "**/*.mjs",
+    "src/discord/bot/commands/best-sellers.ts"
+  ]
 }

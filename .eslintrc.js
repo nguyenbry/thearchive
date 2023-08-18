@@ -41,6 +41,7 @@ const config = {
     "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     "unicorn/consistent-destructuring": "off",
     "unicorn/prefer-module": "off",
+    "unicorn/no-null": "warn",
   },
 };
 

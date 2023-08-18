@@ -1,14 +1,33 @@
-/* eslint-disable unicorn/no-null */
 import { z } from "zod";
 import { environment } from "../environment";
 
-const releaseDate = z.custom<`{number}-{number}-{number}`>((v) => {
-  if (typeof v !== "string") return false;
-  const nums = v.split("-");
-  if (nums.length !== 3) return false;
+const releaseDate = z
+  .custom<`{number}-{number}-{number}` | "">(
+    (v) => {
+      if (typeof v !== "string") return false;
+      if (v.trim() === "") return true;
+      const nums = v.split("-");
+      if (nums.length !== 3) return false;
 
-  return nums.every((n) => /^\d+$/.test(n));
-});
+      return nums.every((n) => /^\d+$/.test(n));
+    },
+    (input) => {
+      let actual = "unknown input";
+      try {
+        actual = JSON.stringify(input);
+      } catch {
+        // do nothing
+      }
+
+      return {
+        message:
+          "Release date must be in the format of YYYY-MM-DD, received " +
+          actual,
+      };
+    },
+  )
+  // slightly hacky because v can be a whitespace string, but it's typed as "", so we use trim
+  .transform((v) => (v.trim() === "" ? null : v));
 
 const AlgoliaHit = z
   .object({
@@ -18,12 +37,7 @@ const AlgoliaHit = z
     thumbnail_url: z.string().url(),
     url: z.string(), // partial url
     release_date: releaseDate,
-    style_id: z.string().transform((v) => {
-      if (v.length === 0) {
-        return null;
-      }
-      return v;
-    }),
+    style_id: z.string().transform((v) => (v.length > 0 ? v : null)),
     price: z.number(), // retail price
     highest_bid: z.number().int(),
     lowest_ask: z.number().int(),
@@ -31,9 +45,14 @@ const AlgoliaHit = z
     sales_last_72: z.number().int(),
     deadstock_sold: z.number().int(),
   })
-  .refine((v) => {
-    return v.id === v.uuid;
-  })
+  .refine(
+    (v) => {
+      return v.id === v.uuid;
+    },
+    {
+      message: "we assume id and uuid must be the same",
+    },
+  )
   .transform(
     ({
       price,
@@ -67,13 +86,13 @@ const AlgoliaHit = z
     },
   );
 
-type AlgoliaHit = z.infer<typeof AlgoliaHit>;
+export type AlgoliaHit = z.infer<typeof AlgoliaHit>;
 
 const AlgoliaResponse = z.object({
   hits: AlgoliaHit.array(),
 });
 
-export async function searchAlgolia(query: string) {
+export async function getAlgoliaHits(query: string) {
   const response = await fetch(environment.STOCKX_ALGOLIA_URL, {
     method: "POST",
     headers: {

@@ -4,9 +4,9 @@ import { startExpressServer } from "./src/express/server";
 import { searchForNewSalesAndUpload } from "./src/loop/handle-sales";
 import { connectToDatabase } from "./src/mongoose/connect-to-database";
 import { adminAccount } from "./src/sneaker-consign/admin-account";
-import { initBestSellersBot } from "./src/discord/best-sellers.bot";
+import { startBot } from "./src/discord/bot/discord-bot";
 import { healthCheckLog, loopLog } from "./src/logger";
-import { searchAlgolia } from "./src/stockx/algolia-search";
+import { getAlgoliaHits } from "./src/stockx/algolia-search";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 
 const developmentPath = __dirname + "/dev";
@@ -41,7 +41,7 @@ const runAndScheduleAgain = async () => {
 async function main() {
   adminAccount.on("ready", () => {
     void runAndScheduleAgain(); // comment this out if you're editing the code and don't want it to run on startup
-    initBestSellersBot(); // the bot uses the admin account, so only put it online after the admin account is ready
+    void startBot(); // the bot uses the admin account, so only put it online after the admin account is ready
   });
 
   await connectToDatabase();
@@ -51,14 +51,14 @@ async function main() {
 
 async function testMain() {
   const queries = [
-    "jordan 1 banned",
-    "yeezy 700",
-    "new balance 992",
-    "supreme swarovski tee",
+    "BAPE Color Camo Shark Day Pack Backpack // Navy - M/L",
+    // "yeezy 700",
+    // "new balance 992",
+    // "supreme swarovski tee",
   ];
 
   const proms = queries.map(async (query) => {
-    const data = await searchAlgolia(query);
+    const data = await getAlgoliaHits(query);
     return data;
   });
 
