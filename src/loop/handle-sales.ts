@@ -8,7 +8,7 @@ import {
 } from "../mongoose/models/sold.model";
 import { sendSoldEmbeds } from "../discord/webhook";
 import { adminAccount } from "../sneaker-consign/admin-account";
-import { Logger } from "../logger";
+import { Logger, mongooseLog, sneakerConsignLog, webhookLog } from "../logger";
 
 const defaults = {
   location: "0",
@@ -122,7 +122,7 @@ export async function getSalesOptionalCursor(cursorDateSold: Date | undefined) {
 export async function searchForNewSalesAndUpload() {
   const cursorDateSold = await getLatestSoldDate();
 
-  Logger.log("searching for new sales with cursor", cursorDateSold);
+  sneakerConsignLog("searching for new sales with cursor", cursorDateSold);
   /**
    * Search for items sold after the cursor date
    */
@@ -151,16 +151,16 @@ export async function searchForNewSalesAndUpload() {
   }
 
   if (newItems.length === 0) {
-    Logger.log("no new items found. exiting");
+    sneakerConsignLog("no new items found. exiting");
     return;
   }
 
-  Logger.log(`got ${newItems.length} new items. inserting...`);
+  sneakerConsignLog(`got ${newItems.length} new items. inserting...`);
   const results = await SoldModel.insertMany(newItems);
-  Logger.log("inserted results", results.length);
-  Logger.log("sending embeds");
+  mongooseLog("inserted results", results.length);
+  webhookLog("sending embeds");
   await sendSoldEmbeds(newItems);
-  Logger.log("sending complete ✅");
+  webhookLog("sending complete ✅");
 
   Logger.log({
     newItems,

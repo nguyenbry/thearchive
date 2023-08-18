@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { environment } from "../environment";
-import { Logger } from "../logger";
+import { mongooseLog } from "../logger";
 mongoose.set("strictQuery", false);
 
 type ConnectionPromise = Promise<typeof mongoose>;
@@ -26,7 +26,7 @@ export async function connectToDatabase(): ConnectionPromise {
 
   // connection doesn't exist, create a new one
   if (!globalForMongo.mongo_promise) {
-    Logger.log("Creating new MongoDB connection");
+    mongooseLog("Creating new MongoDB connection");
 
     const newPromise = mongoose.connect(environment.MONGO_URI, {
       authSource: "admin",
@@ -37,12 +37,12 @@ export async function connectToDatabase(): ConnectionPromise {
       globalForMongo.mongo_conn = await globalForMongo.mongo_promise;
     } catch (error) {
       globalForMongo.mongo_promise = undefined;
-      Logger.log("Error connecting to DB", error);
+      mongooseLog("Error connecting to DB", error);
 
       // eslint-disable-next-line unicorn/no-process-exit
       process.exit(1);
     }
-    Logger.log("✅ Connected to DB");
+    mongooseLog("✅ Connected to DB");
 
     return globalForMongo.mongo_conn;
   }
@@ -51,7 +51,7 @@ export async function connectToDatabase(): ConnectionPromise {
     globalForMongo.mongo_conn = await globalForMongo.mongo_promise;
   } catch (error) {
     globalForMongo.mongo_promise = undefined;
-    Logger.log("Error connecting to DB", error);
+    mongooseLog("Error connecting to DB", error);
 
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1);

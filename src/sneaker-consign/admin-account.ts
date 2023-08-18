@@ -14,7 +14,7 @@ import {
 import { addHours } from "date-fns";
 import { environment } from "../environment";
 import { EventEmitter } from "node:events";
-import { Logger } from "../logger";
+import { adminAccountLog } from "../logger";
 const DEFAULT_STORE_ID = "0";
 
 type EmitterEvents = "ready";
@@ -38,7 +38,7 @@ class AdminAccount {
   }
 
   private setReady() {
-    Logger.log("admin account is ready");
+    adminAccountLog("admin account is ready");
     this.emit("ready");
   }
 
@@ -50,16 +50,16 @@ class AdminAccount {
       this.setReady();
       return;
     }
-    Logger.log("no token data");
+    adminAccountLog("no token data");
     // there's no token, check for a sesssion (2fa email has sent)
     const sessionData = await getSessionData();
 
     if (sessionData) {
-      Logger.log("session data exists");
+      adminAccountLog("session data exists");
       this.sessionId = sessionData.id;
       return;
     }
-    Logger.log("no session data");
+    adminAccountLog("no session data");
 
     // no session data
     const sessionId = await this.getSessionId();
@@ -81,13 +81,13 @@ class AdminAccount {
         })
         .parse(body).session;
     } catch (error) {
-      Logger.log("getting session failed validation", body);
+      adminAccountLog("getting session failed validation", body);
 
       throw error;
     }
 
     this.sessionId = session;
-    Logger.log("got session id");
+    adminAccountLog("got session id");
     return session;
   }
 
@@ -146,7 +146,7 @@ class AdminAccount {
   }
 
   public hello() {
-    Logger.log("hello");
+    adminAccountLog("hello");
   }
 }
 
