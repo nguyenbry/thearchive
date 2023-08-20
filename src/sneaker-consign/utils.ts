@@ -9,6 +9,7 @@ export const SNEAKER_CONSIGN_URLS = {
   TWO_FACTOR_AUTH: getFullUrl("/checkverification"),
   SOLD: getFullUrl("/getsold"),
   STORE_HOME: getFullUrl("/getstorehome"),
+  LISTING: getFullUrl("/getlisting"),
 };
 
 export function proceedsToPayout(proceeds: number) {

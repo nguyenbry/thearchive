@@ -24,9 +24,7 @@ export const searchAlgoliaCommand: ConditionalCommand = {
       return;
     }
 
-    log(`querying ${query}`);
-
-    const { hits } = await getAlgoliaHits(query);
+    const hits = await getAlgoliaHits(query);
     if (hits.length === 0) {
       const response = `No results found for '${query}'`;
       log(response);

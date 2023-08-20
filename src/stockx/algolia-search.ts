@@ -2,7 +2,7 @@ import { z } from "zod";
 import { environment } from "../environment";
 
 const releaseDate = z
-  .custom<`{number}-{number}-{number}` | "">(
+  .custom<`{number}-{number}-{number}`>(
     (v) => {
       if (typeof v !== "string") return false;
       if (v.trim() === "") return true;
@@ -118,7 +118,7 @@ export async function getAlgoliaHits(query: string) {
   const data = (await response.json()) as unknown;
   try {
     const parsed = AlgoliaResponse.parse(data);
-    return parsed;
+    return parsed.hits;
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.log(JSON.stringify(error.flatten(), undefined, 2));

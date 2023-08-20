@@ -8,6 +8,7 @@ import { startBot } from "./src/discord/bot/discord-bot";
 import { healthCheckLog, loopLog } from "./src/logger";
 import { getAlgoliaHits } from "./src/stockx/algolia-search";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { loopVerification } from "./src/discord/bot/tasks/matcher-verification";
 
 const developmentPath = __dirname + "/dev";
 if (!existsSync(developmentPath)) mkdirSync(developmentPath);
@@ -46,6 +47,7 @@ async function main() {
 
   await connectToDatabase();
   void adminAccount.init();
+  void loopVerification();
   startExpressServer();
 }
 

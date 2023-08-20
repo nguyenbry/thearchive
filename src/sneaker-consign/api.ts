@@ -5,46 +5,62 @@ import { SNEAKER_CONSIGN_URLS } from "./utils";
 import { URLValidator } from "../lib/validators";
 import { SoldModel } from "../mongoose/models/sold.model";
 import { adminAccount } from "./admin-account";
+import { isValid } from "date-fns";
+import { ProductModel } from "../mongoose/models/product.model";
 
-const TopShoe = z.object({
-  avg: z.number(), // average price
-  id: z.string(), // sku
-  image: URLValidator,
-  name: z.string(),
-  numberSold: z.number().int(),
-});
+function getStoreId() {
+  return adminAccount.tokenData.id;
+}
+
+const TopShoe = z
+  .object({
+    avg: z.number(), // average price
+    id: z.string(), // sku
+    image: URLValidator,
+    name: z.string(),
+    numberSold: z.number().int(),
+  })
+  .transform(({ id, ...rest }) => {
+    return {
+      sku: id,
+      ...rest,
+    };
+  });
 
 export async function getBestSellers() {
   const sp = new URLSearchParams({
     duration: "3",
-    storeId: adminAccount.tokenData.id,
+    storeId: getStoreId(),
   });
 
   const topSellers = await GET(SNEAKER_CONSIGN_URLS.STORE_HOME, sp, true)
     .then((data) => z.object({ topShoes: TopShoe.array() }).parse(data))
-    .then(
-      (parsed) => parsed.topShoes.map((item) => ({ ...item, sku: item.id })), // for consistency
-    );
+    .then((parsed) => parsed.topShoes);
 
-  const uniqueSkus = R.uniq(topSellers.map((s) => s.id));
+  const uniqueSkus = R.uniqBy(topSellers, (s) => s.sku + s.name);
 
-  const solds = await SoldModel.find(
-    { sku: { $in: uniqueSkus } },
-    { price: 1, sku: 1, daysListed: 1, proceeds: 1, size: 1, dateSold: 1 },
-  )
+  const products = await ProductModel.find({
+    $or: uniqueSkus.map(({ sku, name }) => ({ sku, name })),
+  });
+
+  const solds = await SoldModel.find({
+    product: { $in: products.map((p) => p._id) },
+  })
     .lean()
     .then((soldItems) =>
-      soldItems.map(({ price, sku, daysListed, proceeds, size, dateSold }) => ({
-        price,
-        size,
-        sku,
-        daysListed,
-        proceeds,
-        dateSold,
-      })),
+      soldItems.map(
+        ({ price, product, daysListed, proceeds, size, dateSold }) => ({
+          price,
+          size,
+          product,
+          daysListed,
+          proceeds,
+          dateSold,
+        }),
+      ),
     );
 
-  const skuToSold = R.groupBy(solds, (s) => s.sku);
+  const productToSolds = R.groupBy(solds, (s) => s.product.toString());
 
   const out = topSellers.map((topSeller) => {
     /**
@@ -52,7 +68,15 @@ export async function getBestSellers() {
      * some new sales because we sync every x minutes in the main loop,
      * that's okay.. this isn't too critical
      */
-    const soldForThisSku = skuToSold[topSeller.sku];
+    const product = products.find(
+      (p) => p.sku === topSeller.sku && p.name === topSeller.name,
+    );
+
+    if (!product) {
+      return topSeller;
+    }
+
+    const soldForThisSku = productToSolds[product._id.toString()];
 
     if (!soldForThisSku) {
       return topSeller;
@@ -85,10 +109,9 @@ export async function getBestSellers() {
 
     return {
       ...topSeller,
-      items: R.pipe(
+      items: R.sort(
         soldForThisSku,
-        R.map(({ sku: _, ...rest }) => ({ ...rest })), // don't need sku
-        R.sort((a, b) => a.dateSold.getTime() - b.dateSold.getTime()), // ascending
+        (a, b) => a.dateSold.getTime() - b.dateSold.getTime(), // ascending
       ),
       uniqueSizes,
       daysTilSoldData,
@@ -100,3 +123,56 @@ export async function getBestSellers() {
 }
 
 export type BestSeller = Awaited<ReturnType<typeof getBestSellers>>[number];
+
+export async function getItemActualSoldTime(listingId: string) {
+  const sp = new URLSearchParams({
+    listingId,
+    storeId: getStoreId(),
+  });
+
+  const listingData = await GET(SNEAKER_CONSIGN_URLS.LISTING, sp, true);
+
+  const { logItems } = z
+    .object({
+      listing: z.object({
+        status: z.literal("Fulfilled"),
+      }),
+      logItems: z.array(
+        z.object({
+          message: z.string(),
+          time: z.string(),
+          type: z.number().int(),
+        }),
+      ),
+    })
+    .refine(
+      (v) => {
+        return v.logItems.every((logItem) => {
+          try {
+            const date = new Date(logItem.time);
+            return isValid(date);
+          } catch {
+            return false;
+          }
+        });
+      },
+      {
+        message: "One of the log items have invalid date",
+      },
+    )
+    .parse(listingData);
+
+  const soldEvent = logItems.find(({ message }) =>
+    message.toLowerCase().includes("sold"),
+  );
+
+  if (!soldEvent) {
+    throw new Error(
+      "No sold event found" + JSON.stringify(logItems, undefined, 2),
+    );
+  }
+
+  const date = new Date(soldEvent.time);
+
+  return date; // sold date
+}
